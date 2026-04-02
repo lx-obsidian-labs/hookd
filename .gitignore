@@ -18,3 +18,4 @@ __pycache__
 .env.local
 .next
 .github
+hooked-project/web/.data/
