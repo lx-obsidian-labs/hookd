@@ -7,11 +7,13 @@ import { useHookedApp } from "@/lib/hooked-app";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type ChatClientProps = {
   initialMatchId: string;
 };
+
+const MAX_MESSAGE_LENGTH = 280;
 
 export function ChatClient({ initialMatchId }: ChatClientProps) {
   const router = useRouter();
@@ -29,6 +31,7 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
   const [matchFilter, setMatchFilter] = useState<"all" | "unread">("all");
   const [draft, setDraft] = useState("");
   const [notice, setNotice] = useState("");
+  const messageListRef = useRef<HTMLDivElement | null>(null);
 
   const previewMessages = [
     { id: "preview-1", body: "You looked incredible in your last stream.", time: "21:04" },
@@ -75,6 +78,13 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
     markMatchAsRead(activeMatch.id);
   }, [activeMatch, markMatchAsRead, messages.length]);
 
+  useEffect(() => {
+    if (!messageListRef.current) {
+      return;
+    }
+    messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+  }, [activeMatch?.id, messages.length]);
+
   function onSelectMatch(matchId: string) {
     setSelectedMatchId(matchId);
     setNotice("");
@@ -88,7 +98,18 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
       return;
     }
 
-    const result = sendTextMessage(activeMatch.id, draft);
+    const normalizedDraft = draft.trim();
+    if (!normalizedDraft) {
+      setNotice("Type a message before sending.");
+      return;
+    }
+
+    if (normalizedDraft.length > MAX_MESSAGE_LENGTH) {
+      setNotice(`Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.`);
+      return;
+    }
+
+    const result = sendTextMessage(activeMatch.id, normalizedDraft);
     if (!result.ok) {
       setNotice(result.message);
       return;
@@ -104,7 +125,7 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
       return;
     }
 
-    const result = sendPaidMediaMessage(activeMatch.id, type, draft);
+    const result = sendPaidMediaMessage(activeMatch.id, type, draft.trim());
     if (!result.ok) {
       setNotice(result.message);
       return;
@@ -140,6 +161,31 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="neon-pill rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]">Chat Studio</span>
           <span className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-xs text-text-muted">Free text + paid media lane</span>
+        </div>
+      </section>
+
+      <section className="app-surface app-section reveal-rise mb-4 grid gap-4 overflow-hidden p-4 sm:grid-cols-[0.9fr_1.1fr] sm:p-5">
+        <div className="relative overflow-hidden rounded-2xl border border-white/15">
+          <Image
+            src="/profile-mila.svg"
+            alt="Featured creator profile"
+            width={900}
+            height={1100}
+            className="h-72 w-full object-cover sm:h-full"
+          />
+          <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-[#05070f] via-[#05070fbf] to-transparent p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-accent">Featured creator</p>
+            <p className="mt-1 text-base font-semibold text-white">Mila is online now in premium chat</p>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-accent/30 bg-accent/10 p-4 sm:p-5">
+          <h2 className="text-lg font-semibold text-accent-strong">Production chat controls</h2>
+          <ul className="mt-3 space-y-2 text-sm leading-6 text-text-muted">
+            <li>- Unread filters and mark-as-read for inbox hygiene</li>
+            <li>- Token-aware media messaging for paid image/video sends</li>
+            <li>- Message length protection and input validation before send</li>
+            <li>- Auto-scroll to newest message for live conversation flow</li>
+          </ul>
         </div>
       </section>
 
@@ -282,7 +328,7 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
             </div>
             <span className="text-xs text-text-muted">Text free | Wallet {wallet.available} tokens</span>
           </div>
-          <div className="max-h-72 space-y-3 overflow-y-auto rounded-xl border border-white/10 bg-[#0d1b2c]/90 p-3">
+          <div ref={messageListRef} className="max-h-72 space-y-3 overflow-y-auto rounded-xl border border-white/10 bg-[#0d1b2c]/90 p-3">
             {messages.length === 0 ? (
               <p className="text-sm text-text-muted">No messages yet. Send the first one.</p>
             ) : (
@@ -308,15 +354,18 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               placeholder="Type a free text message"
+              maxLength={MAX_MESSAGE_LENGTH}
               className="app-input w-full rounded-xl px-3 py-2 text-sm"
             />
             <button
               type="submit"
+              disabled={!draft.trim()}
               className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-[#1d1003]"
             >
               Send text free
             </button>
           </form>
+          <p className="mt-2 text-right text-[11px] text-text-muted">{draft.trim().length}/{MAX_MESSAGE_LENGTH}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
