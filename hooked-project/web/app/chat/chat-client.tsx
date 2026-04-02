@@ -7,7 +7,7 @@ import { useHookedApp } from "@/lib/hooked-app";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type ChatClientProps = {
   initialMatchId: string;
@@ -23,6 +23,12 @@ const ROTATING_HERO_IMAGES = [
   "/profile-jules.svg",
   "/profile-avery.svg",
   "/profile-default.svg",
+];
+const QUICK_REPLY_TEMPLATES = [
+  "Hey, how is your night going?",
+  "Want to move this to a private room?",
+  "I can send a teaser photo next.",
+  "Tell me what vibe you are in the mood for.",
 ];
 
 export function ChatClient({ initialMatchId }: ChatClientProps) {
@@ -41,6 +47,7 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
   const [matchFilter, setMatchFilter] = useState<"all" | "unread">("all");
   const [draft, setDraft] = useState("");
   const [notice, setNotice] = useState("");
+  const [messageQuery, setMessageQuery] = useState("");
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const [heroImageIndex, setHeroImageIndex] = useState(0);
   const [heroVisible, setHeroVisible] = useState(true);
@@ -82,6 +89,13 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
     [resolvedMatchId, visibleMatches],
   );
   const messages = activeMatch ? getMessages(activeMatch.id) : [];
+  const filteredMessages = useMemo(() => {
+    const normalized = messageQuery.trim().toLowerCase();
+    if (!normalized) {
+      return messages;
+    }
+    return messages.filter((message) => message.body.toLowerCase().includes(normalized));
+  }, [messages, messageQuery]);
 
   useEffect(() => {
     if (!activeMatch) {
@@ -130,8 +144,7 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
     router.replace(`/chat?match=${encodeURIComponent(matchId)}`);
   }
 
-  function onSend(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function sendDraftMessage() {
     if (!activeMatch) {
       setNotice("Select a valid match to send messages.");
       return;
@@ -156,6 +169,44 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
 
     setDraft("");
     setNotice("Message sent.");
+  }
+
+  function onSend(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    sendDraftMessage();
+  }
+
+  function onComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendDraftMessage();
+    }
+  }
+
+  function onQuickReply(template: string) {
+    setDraft(template);
+    setNotice("Quick reply loaded. Press send to deliver.");
+  }
+
+  function onExportTranscript() {
+    if (!activeMatch) {
+      setNotice("Select a match before exporting transcript.");
+      return;
+    }
+
+    const transcriptLines = messages.map((message) => {
+      const time = new Date(message.createdAt).toLocaleString();
+      return `[${time}] ${message.type.toUpperCase()}: ${message.body}`;
+    });
+    const transcript = transcriptLines.join("\n");
+    const blob = new Blob([transcript || "No messages yet."], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `chat-${activeMatch.id}.txt`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setNotice("Transcript exported.");
   }
 
   function onSendMedia(type: "image" | "video") {
@@ -365,13 +416,40 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
                 Chat with {activeMatch.peerProfile?.name ?? "match"}
               </h2>
             </div>
-            <span className="text-xs text-text-muted">Text free | Wallet {wallet.available} tokens</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onExportTranscript}
+                className="rounded-full border border-white/20 px-3 py-1 text-[11px] font-semibold text-white/85"
+              >
+                Export chat
+              </button>
+              <span className="text-xs text-text-muted">Text free | Wallet {wallet.available} tokens</span>
+            </div>
+          </div>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <input
+              value={messageQuery}
+              onChange={(event) => setMessageQuery(event.target.value)}
+              placeholder="Search this chat"
+              className="app-input w-full rounded-xl px-3 py-2 text-xs sm:max-w-xs"
+            />
+            {messageQuery.trim() ? (
+              <button
+                type="button"
+                onClick={() => setMessageQuery("")}
+                className="rounded-full border border-white/20 px-3 py-1 text-[11px] font-semibold text-white/85"
+              >
+                Clear search
+              </button>
+            ) : null}
+            <span className="text-xs text-text-muted">{filteredMessages.length} shown</span>
           </div>
           <div ref={messageListRef} className="max-h-72 space-y-3 overflow-y-auto rounded-xl border border-white/10 bg-[#0d1b2c]/90 p-3">
-            {messages.length === 0 ? (
+            {filteredMessages.length === 0 ? (
               <p className="text-sm text-text-muted">No messages yet. Send the first one.</p>
             ) : (
-              messages.map((message) => (
+              filteredMessages.map((message) => (
                 <div key={message.id} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-text-muted">{message.body}</p>
@@ -388,23 +466,37 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
               ))
             )}
           </div>
-          <form onSubmit={onSend} className="mt-4 flex gap-2">
-            <input
+          <form onSubmit={onSend} className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder="Type a free text message"
+              onKeyDown={onComposerKeyDown}
+              placeholder="Type a free text message (Enter to send, Shift+Enter for new line)"
               maxLength={MAX_MESSAGE_LENGTH}
+              rows={2}
               className="app-input w-full rounded-xl px-3 py-2 text-sm"
             />
             <button
               type="submit"
               disabled={!draft.trim()}
-              className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-[#1d1003]"
+              className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-[#1d1003] sm:self-start"
             >
               Send text free
             </button>
           </form>
           <p className="mt-2 text-right text-[11px] text-text-muted">{draft.trim().length}/{MAX_MESSAGE_LENGTH}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {QUICK_REPLY_TEMPLATES.map((template) => (
+              <button
+                key={template}
+                type="button"
+                onClick={() => onQuickReply(template)}
+                className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white/85 transition hover:bg-white/10"
+              >
+                {template}
+              </button>
+            ))}
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
