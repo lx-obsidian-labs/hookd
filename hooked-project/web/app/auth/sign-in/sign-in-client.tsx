@@ -6,12 +6,23 @@ import { useHookedApp } from "@/lib/hooked-app";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type SignInClientProps = {
   initialNextPath: string;
   initialMessage?: string;
 };
+
+const HERO_ROTATION_MS = 2000;
+const SIGN_IN_HERO_IMAGES = [
+  "/cover-mila.svg",
+  "/cover-nia.svg",
+  "/cover-ari.svg",
+  "/cover-skye.svg",
+  "/cover-jules.svg",
+  "/cover-avery.svg",
+  "/cover-default.svg",
+];
 
 export function SignInClient({ initialNextPath, initialMessage }: SignInClientProps) {
   const router = useRouter();
@@ -27,6 +38,22 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
   const [devOtpHint, setDevOtpHint] = useState("");
   const [devMagicLink, setDevMagicLink] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [heroImageIndex, setHeroImageIndex] = useState(0);
+  const [heroVisible, setHeroVisible] = useState(true);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setHeroImageIndex((prev) => (prev + 1) % SIGN_IN_HERO_IMAGES.length);
+    }, HERO_ROTATION_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    setHeroVisible(false);
+    const timeoutId = window.setTimeout(() => setHeroVisible(true), 30);
+    return () => window.clearTimeout(timeoutId);
+  }, [heroImageIndex]);
 
   async function onRequestOtp() {
     setMessage("");
@@ -126,12 +153,11 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
         <article className="app-surface app-section overflow-hidden">
           <div className="relative">
             <Image
-              src="https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1600&q=80"
-              alt="Night city mood"
+              src={SIGN_IN_HERO_IMAGES[heroImageIndex] ?? "/cover-default.svg"}
+              alt="Featured creators"
               width={1600}
               height={1000}
-              unoptimized
-              className="h-56 w-full object-cover sm:h-72 lg:h-[520px]"
+              className={`h-56 w-full object-cover transition-opacity duration-500 sm:h-72 lg:h-[520px] ${heroVisible ? "opacity-100" : "opacity-35"}`}
             />
             <div className="absolute inset-0 bg-linear-to-t from-[#07070b] via-[#07070baa] to-transparent p-5">
               <p className="inline-flex rounded-full border border-emerald-300/40 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">

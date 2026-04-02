@@ -14,6 +14,16 @@ type ChatClientProps = {
 };
 
 const MAX_MESSAGE_LENGTH = 280;
+const HERO_ROTATION_MS = 2000;
+const ROTATING_HERO_IMAGES = [
+  "/profile-mila.svg",
+  "/profile-nia.svg",
+  "/profile-ari.svg",
+  "/profile-skye.svg",
+  "/profile-jules.svg",
+  "/profile-avery.svg",
+  "/profile-default.svg",
+];
 
 export function ChatClient({ initialMatchId }: ChatClientProps) {
   const router = useRouter();
@@ -32,6 +42,8 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
   const [draft, setDraft] = useState("");
   const [notice, setNotice] = useState("");
   const messageListRef = useRef<HTMLDivElement | null>(null);
+  const [heroImageIndex, setHeroImageIndex] = useState(0);
+  const [heroVisible, setHeroVisible] = useState(true);
 
   const previewMessages = [
     { id: "preview-1", body: "You looked incredible in your last stream.", time: "21:04" },
@@ -85,9 +97,36 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
     messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
   }, [activeMatch?.id, messages.length]);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setHeroImageIndex((prev) => (prev + 1) % ROTATING_HERO_IMAGES.length);
+    }, HERO_ROTATION_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    setHeroVisible(false);
+    const timeoutId = window.setTimeout(() => setHeroVisible(true), 30);
+    return () => window.clearTimeout(timeoutId);
+  }, [heroImageIndex]);
+
   function onSelectMatch(matchId: string) {
     setSelectedMatchId(matchId);
     setNotice("");
+
+    const selected = matchesWithUnread.find((match) => match.id === matchId);
+    if (selected) {
+      const selectedImage = profileImageFor({
+        ownerId: selected.peerProfile?.ownerId,
+        name: selected.peerProfile?.name,
+      });
+      const nextIndex = ROTATING_HERO_IMAGES.indexOf(selectedImage);
+      if (nextIndex >= 0) {
+        setHeroImageIndex(nextIndex);
+      }
+    }
+
     router.replace(`/chat?match=${encodeURIComponent(matchId)}`);
   }
 
@@ -167,11 +206,11 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
       <section className="app-surface app-section reveal-rise mb-4 grid gap-4 overflow-hidden p-4 sm:grid-cols-[0.9fr_1.1fr] sm:p-5">
         <div className="relative overflow-hidden rounded-2xl border border-white/15">
           <Image
-            src="/profile-mila.svg"
+            src={ROTATING_HERO_IMAGES[heroImageIndex] ?? "/profile-default.svg"}
             alt="Featured creator profile"
             width={900}
             height={1100}
-            className="h-72 w-full object-cover sm:h-full"
+            className={`h-72 w-full object-cover transition-opacity duration-500 ${heroVisible ? "opacity-100" : "opacity-35"}`}
           />
           <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-[#05070f] via-[#05070fbf] to-transparent p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-accent">Featured creator</p>
