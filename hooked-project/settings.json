@@ -1,0 +1,21 @@
+{
+  "strict_intent_mode": true,
+  "intent_questions_count": 5,
+  "branding": {
+    "name": "Siphesihle Nathan Vilane",
+    "company": "Lx Obsidian Labs",
+    "signature": "Crafted by Siphesihle Nathan Vilane | Lx Obsidian Labs",
+    "placement_priority": [
+      "footer",
+      "metadata",
+      "code_comment"
+    ]
+  },
+  "production_only": true,
+  "allow_placeholders": false,
+  "default_stack": [
+    "nextjs",
+    "react",
+    "tailwind"
+  ]
+}
