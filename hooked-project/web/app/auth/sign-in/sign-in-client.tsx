@@ -14,6 +14,8 @@ type SignInClientProps = {
   initialMessage?: string;
 };
 
+type MessageTone = "info" | "success" | "error";
+
 const HERO_ROTATION_MS = 2000;
 const SIGN_IN_HERO_IMAGES = [
   "/cover-mila.svg",
@@ -36,10 +38,20 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
   const [role, setRole] = useState<AccountRole>("user");
   const [rememberSession, setRememberSession] = useState(true);
   const [message, setMessage] = useState(initialMessage ?? "");
+  const [messageTone, setMessageTone] = useState<MessageTone>(initialMessage ? "error" : "info");
   const [devOtpHint, setDevOtpHint] = useState("");
   const [devMagicLink, setDevMagicLink] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [heroImageIndex, setHeroImageIndex] = useState(0);
+
+  const canRequestOtp = !submitting && phone.trim().length > 0;
+  const canRequestMagicLink = !submitting && email.trim().length > 0;
+  const canSubmit =
+    hydrated &&
+    !submitting &&
+    (method === "phone"
+      ? phone.trim().length > 0 && otpCode.trim().length > 0
+      : email.trim().length > 0 && password.trim().length > 0);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -49,101 +61,153 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
     return () => window.clearInterval(intervalId);
   }, []);
 
-  async function onRequestOtp() {
+  useEffect(() => {
     setMessage("");
+    setMessageTone("info");
+    setDevOtpHint("");
+    setDevMagicLink("");
+  }, [method]);
+
+  async function onRequestOtp() {
+    if (!phone.trim()) {
+      setMessage("Please enter a phone number first.");
+      setMessageTone("error");
+      return;
+    }
+
+    setMessage("");
+    setMessageTone("info");
     setDevOtpHint("");
     setDevMagicLink("");
     setSubmitting(true);
-    const response = await fetch("/api/auth/otp/request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone }),
-    });
-    const payload = (await response.json()) as { ok: boolean; message?: string; devCode?: string };
-    setSubmitting(false);
-    if (!payload.ok) {
-      setMessage(payload.message ?? "Could not send code.");
-      return;
-    }
-    setMessage(payload.message ?? "Verification code sent.");
-    if (payload.devCode) {
-      setDevOtpHint(`Dev code: ${payload.devCode}`);
+    try {
+      const response = await fetch("/api/auth/otp/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: phone.trim() }),
+      });
+      const payload = (await response.json()) as { ok: boolean; message?: string; devCode?: string };
+      if (!payload.ok) {
+        setMessage(payload.message ?? "Could not send code.");
+        setMessageTone("error");
+        return;
+      }
+      setMessage(payload.message ?? "Verification code sent.");
+      setMessageTone("success");
+      if (payload.devCode) {
+        setDevOtpHint(`Dev code: ${payload.devCode}`);
+      }
+    } catch {
+      setMessage("Could not send code right now. Please try again.");
+      setMessageTone("error");
+    } finally {
+      setSubmitting(false);
     }
   }
 
   async function onRequestMagicLink() {
-    setMessage("");
-    setDevMagicLink("");
-    setSubmitting(true);
-    const response = await fetch("/api/auth/magic-link/request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    const payload = (await response.json()) as { ok: boolean; message?: string; devLink?: string };
-    setSubmitting(false);
-    if (!payload.ok) {
-      setMessage(payload.message ?? "Could not send magic link.");
+    if (!email.trim()) {
+      setMessage("Please enter your email first.");
+      setMessageTone("error");
       return;
     }
-    setMessage(payload.message ?? "Magic link sent.");
-    if (payload.devLink) {
-      setDevMagicLink(payload.devLink);
+
+    setMessage("");
+    setMessageTone("info");
+    setDevMagicLink("");
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/magic-link/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const payload = (await response.json()) as { ok: boolean; message?: string; devLink?: string };
+      if (!payload.ok) {
+        setMessage(payload.message ?? "Could not send magic link.");
+        setMessageTone("error");
+        return;
+      }
+      setMessage(payload.message ?? "Magic link sent.");
+      setMessageTone("success");
+      if (payload.devLink) {
+        setDevMagicLink(payload.devLink);
+      }
+    } catch {
+      setMessage("Could not send magic link right now. Please try again.");
+      setMessageTone("error");
+    } finally {
+      setSubmitting(false);
     }
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
+    setMessageTone("info");
     setSubmitting(true);
-    const response =
-      method === "phone"
-        ? await fetch("/api/auth/otp/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ phone, code: otpCode }),
-          })
-        : await fetch("/api/auth/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password, role, otpCode, nextPath: initialNextPath }),
-          });
-    const result = (await response.json()) as {
-      ok: boolean;
-      message?: string;
-      account?: {
-        id: string;
-        email: string;
-        displayName: string;
-        role: AccountRole;
-        age: number;
-        city: string;
-        ageVerified: boolean;
-        ageVerifiedAt: string | null;
-        createdAt: string;
+    try {
+      const response =
+        method === "phone"
+          ? await fetch("/api/auth/otp/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ phone: phone.trim(), code: otpCode.trim() }),
+            })
+          : await fetch("/api/auth/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: email.trim(),
+                password,
+                role,
+                otpCode: otpCode.trim(),
+                nextPath: initialNextPath,
+              }),
+            });
+      const result = (await response.json()) as {
+        ok: boolean;
+        message?: string;
+        account?: {
+          id: string;
+          email: string;
+          displayName: string;
+          role: AccountRole;
+          age: number;
+          city: string;
+          ageVerified: boolean;
+          ageVerifiedAt: string | null;
+          createdAt: string;
+        };
+        nextPath?: string;
       };
-      nextPath?: string;
-    };
-    setSubmitting(false);
-    if (!result.ok || !result.account) {
-      setMessage(result.message ?? "Could not sign in.");
-      return;
+      if (!result.ok || !result.account) {
+        setMessage(result.message ?? "Could not sign in.");
+        setMessageTone("error");
+        return;
+      }
+
+      syncSessionAccount(result.account);
+
+      const successMessage = rememberSession
+        ? "Welcome back. Taking you to your dashboard..."
+        : "Signed in. Session will be treated as short-lived on supported environments.";
+      setMessage(successMessage);
+      setMessageTone("success");
+
+      const nextPath = resolvePostAuthPath({
+        role: result.account.role,
+        requestedPath: result.nextPath ?? initialNextPath,
+      });
+      window.setTimeout(() => {
+        router.push(nextPath);
+      }, 300);
+    } catch {
+      setMessage("Could not sign in right now. Please try again.");
+      setMessageTone("error");
+    } finally {
+      setSubmitting(false);
     }
-
-    syncSessionAccount(result.account);
-
-    if (!rememberSession) {
-      setMessage("Session preference saved. Short-lived sessions can be enforced in production config.");
-    }
-
-    setMessage("Welcome back. Taking you to your dashboard...");
-    const nextPath = resolvePostAuthPath({
-      role: result.account.role,
-      requestedPath: result.nextPath ?? initialNextPath,
-    });
-    window.setTimeout(() => {
-      router.push(nextPath);
-    }, 300);
   }
 
   return (
@@ -218,8 +282,8 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
                 <button
                   type="button"
                   onClick={onRequestOtp}
-                  disabled={submitting}
-                  className="rounded-full border border-white/25 px-3 py-1.5 text-xs font-semibold"
+                  disabled={!canRequestOtp}
+                  className="rounded-full border border-white/25 px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
                 >
                   Send OTP
                 </button>
@@ -232,6 +296,8 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
                   onChange={(event) => setOtpCode(event.target.value)}
                   inputMode="numeric"
                   placeholder="123456"
+                  autoComplete="one-time-code"
+                  required
                   className="app-input mt-1 w-full rounded-xl px-3 py-2"
                 />
               </label>
@@ -270,7 +336,7 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
             <button
               type="button"
               onClick={onRequestMagicLink}
-              disabled={submitting || !email.trim()}
+              disabled={!canRequestMagicLink}
               className="rounded-full border border-white/25 px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
             >
               Send magic link
@@ -317,7 +383,14 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
             </Link>
           </div>
 
-          {message ? <p className="mt-3 text-sm text-amber-300">{message}</p> : null}
+          {message ? (
+            <p
+              className={`mt-3 text-sm ${messageTone === "error" ? "text-rose-300" : messageTone === "success" ? "text-emerald-300" : "text-amber-300"}`}
+              aria-live="polite"
+            >
+              {message}
+            </p>
+          ) : null}
           {devOtpHint ? <p className="mt-1 text-xs text-emerald-300">{devOtpHint}</p> : null}
           {devMagicLink ? (
             <p className="mt-1 text-xs text-emerald-300 break-all">
@@ -327,7 +400,7 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
 
           <button
             type="submit"
-            disabled={!hydrated || submitting}
+            disabled={!canSubmit}
             className="app-cta mt-5 w-full rounded-full px-5 py-2 text-sm font-semibold transition disabled:opacity-50"
           >
             {submitting ? "Signing in..." : "Enter Hookchat"}
