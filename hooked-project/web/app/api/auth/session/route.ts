@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createSessionRecord, revokeSessionRecord } from "@/lib/server/session-store";
+import { applyAuthCookies, clearAuthCookies } from "@/lib/server/auth-cookies";
 
 type Body = {
   accountId?: string;
   ageVerified?: boolean;
   ficaVerified?: boolean;
 };
-
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 export async function POST(request: Request) {
   let payload: Body;
@@ -24,7 +23,6 @@ export async function POST(request: Request) {
   }
 
   const response = NextResponse.json({ ok: true });
-  const secure = process.env.NODE_ENV === "production";
   const userAgent = request.headers.get("user-agent") ?? "unknown";
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const sessionRecord = await createSessionRecord({
@@ -33,36 +31,11 @@ export async function POST(request: Request) {
     ip,
   });
 
-  response.cookies.set("hooked_session", accountId, {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
-
-  response.cookies.set("hooked_age_verified", payload.ageVerified ? "1" : "0", {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
-
-  response.cookies.set("hooked_fica_verified", payload.ficaVerified ? "1" : "0", {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
-
-  response.cookies.set("hooked_session_token", sessionRecord.id, {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
+  applyAuthCookies(response, {
+    accountId,
+    ageVerified: Boolean(payload.ageVerified),
+    ficaVerified: Boolean(payload.ficaVerified),
+    sessionToken: sessionRecord.id,
   });
 
   return response;
@@ -76,39 +49,7 @@ export async function DELETE() {
   }
 
   const response = NextResponse.json({ ok: true });
-  const secure = process.env.NODE_ENV === "production";
-
-  response.cookies.set("hooked_session", "", {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-
-  response.cookies.set("hooked_age_verified", "0", {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-
-  response.cookies.set("hooked_fica_verified", "0", {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-
-  response.cookies.set("hooked_session_token", "", {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
+  clearAuthCookies(response);
 
   return response;
 }

@@ -3,6 +3,8 @@
 import { ProductShell } from "@/app/_components/product-shell";
 import type { AccountRole } from "@/lib/hooked-app";
 import { useHookedApp } from "@/lib/hooked-app";
+import { resolvePostAuthPath } from "@/lib/safe-next-path";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -126,6 +128,10 @@ export default function SignUpPage() {
       return;
     }
     setSubmitting(true);
+    const requestedNextPath =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("next")
+        : null;
     const response = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -160,6 +166,7 @@ export default function SignUpPage() {
         ficaIdNumber,
         ficaDocumentUrl,
         ficaConsent,
+        nextPath: requestedNextPath ?? undefined,
       }),
     });
     const result = (await response.json()) as {
@@ -176,6 +183,7 @@ export default function SignUpPage() {
         ageVerifiedAt: string | null;
         createdAt: string;
       };
+      nextPath?: string;
     };
     setSubmitting(false);
 
@@ -189,7 +197,15 @@ export default function SignUpPage() {
     if (optInMarketing) {
       window.localStorage.setItem("hooked.marketing-opt-in", "1");
     }
-    router.push("/onboarding/basic");
+
+    const nextPath = resolvePostAuthPath({
+      role: result.account.role,
+      requestedPath: result.nextPath,
+    });
+    setMessage("Account created successfully. Preparing your dashboard...");
+    window.setTimeout(() => {
+      router.push(nextPath);
+    }, 400);
   }
 
   return (
@@ -514,6 +530,19 @@ export default function SignUpPage() {
             Already have an account? <Link className="underline" href="/auth/sign-in">Sign in</Link>
           </p>
         </form>
+        <article className="app-surface app-section stream-card overflow-hidden p-5">
+          <Image
+            src="/asset-velvet-card.svg"
+            alt="Romantic ambience"
+            width={900}
+            height={520}
+            className="h-32 w-full rounded-xl border border-white/10 object-cover"
+          />
+          <p className="mt-3 text-xs uppercase tracking-[0.14em] text-accent-strong">Made for meaningful sparks</p>
+          <p className="mt-2 text-sm leading-6 text-text-muted">
+            Build a profile that feels warm, real, and intentional. Once signup succeeds, you drop straight into your dashboard to keep momentum.
+          </p>
+        </article>
         <article className="app-surface app-section stream-card p-5">
           <h2 className="text-lg font-semibold">Signup checklist</h2>
           <ul className="mt-3 space-y-2 text-sm text-text-muted">

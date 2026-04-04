@@ -3,6 +3,7 @@
 import { ProductShell } from "@/app/_components/product-shell";
 import type { AccountRole } from "@/lib/hooked-app";
 import { useHookedApp } from "@/lib/hooked-app";
+import { resolvePostAuthPath } from "@/lib/safe-next-path";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -39,7 +40,6 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
   const [devMagicLink, setDevMagicLink] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [heroImageIndex, setHeroImageIndex] = useState(0);
-  const [heroVisible, setHeroVisible] = useState(true);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -48,12 +48,6 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
 
     return () => window.clearInterval(intervalId);
   }, []);
-
-  useEffect(() => {
-    setHeroVisible(false);
-    const timeoutId = window.setTimeout(() => setHeroVisible(true), 30);
-    return () => window.clearTimeout(timeoutId);
-  }, [heroImageIndex]);
 
   async function onRequestOtp() {
     setMessage("");
@@ -112,7 +106,7 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
         : await fetch("/api/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password, role, otpCode }),
+            body: JSON.stringify({ email, password, role, otpCode, nextPath: initialNextPath }),
           });
     const result = (await response.json()) as {
       ok: boolean;
@@ -128,6 +122,7 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
         ageVerifiedAt: string | null;
         createdAt: string;
       };
+      nextPath?: string;
     };
     setSubmitting(false);
     if (!result.ok || !result.account) {
@@ -141,7 +136,14 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
       setMessage("Session preference saved. Short-lived sessions can be enforced in production config.");
     }
 
-    router.push(initialNextPath || "/discover");
+    setMessage("Welcome back. Taking you to your dashboard...");
+    const nextPath = resolvePostAuthPath({
+      role: result.account.role,
+      requestedPath: result.nextPath ?? initialNextPath,
+    });
+    window.setTimeout(() => {
+      router.push(nextPath);
+    }, 300);
   }
 
   return (
@@ -153,19 +155,23 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
         <article className="app-surface app-section overflow-hidden">
           <div className="relative">
             <Image
+              key={SIGN_IN_HERO_IMAGES[heroImageIndex]}
               src={SIGN_IN_HERO_IMAGES[heroImageIndex] ?? "/cover-default.svg"}
               alt="Featured creators"
               width={1600}
               height={1000}
-              className={`h-56 w-full object-cover transition-opacity duration-500 sm:h-72 lg:h-[520px] ${heroVisible ? "opacity-100" : "opacity-35"}`}
+              className="h-56 w-full object-cover transition-opacity duration-500 sm:h-72 lg:h-[520px]"
             />
             <div className="absolute inset-0 bg-linear-to-t from-[#07070b] via-[#07070baa] to-transparent p-5">
               <p className="inline-flex rounded-full border border-emerald-300/40 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
                 Secure access
               </p>
               <h3 className="app-title mt-3 max-w-md text-2xl font-semibold sm:text-3xl">
-                Continue where you left off in live rooms, chat, and creator sessions.
+                Continue your story with people who match your energy.
               </h3>
+              <p className="mt-2 max-w-md text-sm text-white/85">
+                Love-forward matching, affectionate conversations, and a safer premium experience - all in one dashboard.
+              </p>
               <ul className="mt-5 space-y-2 text-sm text-white/85">
                 <li>- Login protection with lockout and audit tracing</li>
                 <li>- Session-aware age-gated routing</li>

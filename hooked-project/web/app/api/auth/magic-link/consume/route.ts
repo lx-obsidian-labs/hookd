@@ -3,9 +3,8 @@ import { writeAuditLog } from "@/lib/server/audit-log";
 import { consumeMagicLink } from "@/lib/server/magic-link-store";
 import { getClientIp, getUserAgent } from "@/lib/server/request-meta";
 import { createSessionRecord } from "@/lib/server/session-store";
+import { applyAuthCookies } from "@/lib/server/auth-cookies";
 import { getOrCreateEmailMagicUser } from "@/lib/server/user-store";
-
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 export async function GET(request: Request) {
   const ip = getClientIp(request);
@@ -41,36 +40,13 @@ export async function GET(request: Request) {
     details: { created: userResult.created },
   });
 
-  const nextPath = userResult.created ? "/onboarding/basic" : "/dashboard";
+  const nextPath = "/dashboard";
   const response = NextResponse.redirect(new URL(nextPath, request.url));
-  const secure = process.env.NODE_ENV === "production";
-  response.cookies.set("hooked_session", userResult.user.id, {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
-  response.cookies.set("hooked_age_verified", userResult.user.ageVerified ? "1" : "0", {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
-  response.cookies.set("hooked_fica_verified", userResult.user.fica.status === "verified" ? "1" : "0", {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
-  response.cookies.set("hooked_session_token", sessionRecord.id, {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
+  applyAuthCookies(response, {
+    accountId: userResult.user.id,
+    ageVerified: userResult.user.ageVerified,
+    ficaVerified: userResult.user.fica.status === "verified",
+    sessionToken: sessionRecord.id,
   });
 
   return response;

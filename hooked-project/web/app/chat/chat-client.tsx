@@ -50,7 +50,6 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
   const [messageQuery, setMessageQuery] = useState("");
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const [heroImageIndex, setHeroImageIndex] = useState(0);
-  const [heroVisible, setHeroVisible] = useState(true);
 
   const previewMessages = [
     { id: "preview-1", body: "You looked incredible in your last stream.", time: "21:04" },
@@ -88,7 +87,10 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
     () => visibleMatches.find((match) => match.id === resolvedMatchId) ?? null,
     [resolvedMatchId, visibleMatches],
   );
-  const messages = activeMatch ? getMessages(activeMatch.id) : [];
+  const messages = useMemo(
+    () => (activeMatch ? getMessages(activeMatch.id) : []),
+    [activeMatch, getMessages],
+  );
   const filteredMessages = useMemo(() => {
     const normalized = messageQuery.trim().toLowerCase();
     if (!normalized) {
@@ -118,12 +120,6 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
 
     return () => window.clearInterval(intervalId);
   }, []);
-
-  useEffect(() => {
-    setHeroVisible(false);
-    const timeoutId = window.setTimeout(() => setHeroVisible(true), 30);
-    return () => window.clearTimeout(timeoutId);
-  }, [heroImageIndex]);
 
   function onSelectMatch(matchId: string) {
     setSelectedMatchId(matchId);
@@ -257,17 +253,19 @@ export function ChatClient({ initialMatchId }: ChatClientProps) {
       <section className="app-surface app-section reveal-rise mb-4 grid gap-4 overflow-hidden p-4 sm:grid-cols-[0.9fr_1.1fr] sm:p-5">
         <div className="relative overflow-hidden rounded-2xl border border-white/15">
           <Image
+            key={ROTATING_HERO_IMAGES[heroImageIndex] ?? "/profile-default.svg"}
             src={ROTATING_HERO_IMAGES[heroImageIndex] ?? "/profile-default.svg"}
             alt="Featured creator profile"
             width={900}
             height={1100}
-            className={`h-72 w-full object-cover transition-opacity duration-500 ${heroVisible ? "opacity-100" : "opacity-35"}`}
+            className="h-72 w-full object-cover transition-opacity duration-500"
           />
           <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-[#05070f] via-[#05070fbf] to-transparent p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-accent">Featured creator</p>
-            <p className="mt-1 text-base font-semibold text-white">Mila is online now in premium chat</p>
+              <p className="mt-1 text-base font-semibold text-white">Mila is online now in premium chat</p>
+              <p className="mt-1 text-xs text-white/80">Flirty, affectionate conversations that feel personal and intentional.</p>
+            </div>
           </div>
-        </div>
         <div className="rounded-2xl border border-accent/30 bg-accent/10 p-4 sm:p-5">
           <h2 className="text-lg font-semibold text-accent-strong">Production chat controls</h2>
           <ul className="mt-3 space-y-2 text-sm leading-6 text-text-muted">

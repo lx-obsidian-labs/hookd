@@ -3,10 +3,10 @@ import { writeAuditLog } from "@/lib/server/audit-log";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
 import { getClientIp, getUserAgent } from "@/lib/server/request-meta";
 import { createSessionRecord } from "@/lib/server/session-store";
+import { applyAuthCookies } from "@/lib/server/auth-cookies";
+import { defaultDashboardPathForRole } from "@/lib/safe-next-path";
 import { verifyOtp } from "@/lib/server/otp-store";
 import { createPhoneUser, getUserByPhone } from "@/lib/server/user-store";
-
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
@@ -49,35 +49,19 @@ export async function POST(request: Request) {
     userAgent,
   });
 
-  const response = NextResponse.json({ ok: true, account });
-  const secure = process.env.NODE_ENV === "production";
-  response.cookies.set("hooked_session", account.id, {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
-  response.cookies.set("hooked_age_verified", account.ageVerified ? "1" : "0", {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
-  response.cookies.set("hooked_fica_verified", account.fica.status === "verified" ? "1" : "0", {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
-  response.cookies.set("hooked_session_token", sessionRecord.id, {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
+  const response = NextResponse.json(
+    {
+      ok: true,
+      account,
+      nextPath: defaultDashboardPathForRole(account.role),
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+  applyAuthCookies(response, {
+    accountId: account.id,
+    ageVerified: account.ageVerified,
+    ficaVerified: account.fica.status === "verified",
+    sessionToken: sessionRecord.id,
   });
 
   return response;

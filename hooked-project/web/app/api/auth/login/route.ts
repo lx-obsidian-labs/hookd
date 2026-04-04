@@ -3,9 +3,9 @@ import { writeAuditLog } from "@/lib/server/audit-log";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
 import { getClientIp, getUserAgent } from "@/lib/server/request-meta";
 import { createSessionRecord } from "@/lib/server/session-store";
+import { applyAuthCookies } from "@/lib/server/auth-cookies";
+import { resolvePostAuthPath } from "@/lib/safe-next-path";
 import { loginUser } from "@/lib/server/user-store";
-
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
@@ -30,6 +30,7 @@ export async function POST(request: Request) {
     password?: string;
     role?: "user" | "model";
     otpCode?: string;
+    nextPath?: string;
   };
 
   try {
@@ -79,44 +80,25 @@ export async function POST(request: Request) {
     details: { role: result.user.role },
   });
 
-  const response = NextResponse.json({ ok: true, account: result.user });
-  const secure = process.env.NODE_ENV === "production";
+  const nextPath = resolvePostAuthPath({
+    role: result.user.role,
+    requestedPath: body.nextPath,
+  });
+  const response = NextResponse.json(
+    { ok: true, account: result.user, nextPath },
+    { headers: { "Cache-Control": "no-store" } },
+  );
   const sessionRecord = await createSessionRecord({
     accountId: result.user.id,
     userAgent,
     ip,
   });
 
-  response.cookies.set("hooked_session", result.user.id, {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
-
-  response.cookies.set("hooked_age_verified", result.user.ageVerified ? "1" : "0", {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
-
-  response.cookies.set("hooked_session_token", sessionRecord.id, {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
-
-  response.cookies.set("hooked_fica_verified", result.user.fica.status === "verified" ? "1" : "0", {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
+  applyAuthCookies(response, {
+    accountId: result.user.id,
+    ageVerified: result.user.ageVerified,
+    ficaVerified: result.user.fica.status === "verified",
+    sessionToken: sessionRecord.id,
   });
 
   return response;

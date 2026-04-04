@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { writeAuditLog } from "@/lib/server/audit-log";
 import { getClientIp, getUserAgent } from "@/lib/server/request-meta";
+import { setAgeVerifiedCookie } from "@/lib/server/auth-cookies";
 import { markUserAgeVerified } from "@/lib/server/user-store";
-
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
@@ -38,15 +37,7 @@ export async function POST(request: Request) {
   });
 
   const response = NextResponse.json({ ok: true });
-  const secure = process.env.NODE_ENV === "production";
-
-  response.cookies.set("hooked_age_verified", "1", {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
+  setAgeVerifiedCookie(response, true);
 
   return response;
 }
