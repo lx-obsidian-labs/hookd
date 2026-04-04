@@ -7,7 +7,7 @@ import { resolvePostAuthPath } from "@/lib/safe-next-path";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 type SignInClientProps = {
   initialNextPath: string;
@@ -17,6 +17,8 @@ type SignInClientProps = {
 type MessageTone = "info" | "success" | "error";
 
 const HERO_ROTATION_MS = 2000;
+const OTP_LENGTH = 6;
+const OTP_RESEND_SECONDS = 30;
 const SIGN_IN_HERO_IMAGES = [
   "/cover-mila.svg",
   "/cover-nia.svg",
@@ -43,8 +45,12 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
   const [devMagicLink, setDevMagicLink] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [heroImageIndex, setHeroImageIndex] = useState(0);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
+  const otpInputRef = useRef<HTMLInputElement>(null);
 
   const canRequestOtp = !submitting && phone.trim().length > 0;
+  const canResendOtp = canRequestOtp && otpCooldown === 0;
   const canRequestMagicLink = !submitting && email.trim().length > 0;
   const canSubmit =
     hydrated &&
@@ -62,11 +68,45 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
   }, []);
 
   useEffect(() => {
+    if (otpCooldown <= 0) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setOtpCooldown((previous) => (previous > 0 ? previous - 1 : 0));
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [otpCooldown]);
+
+  useEffect(() => {
     setMessage("");
     setMessageTone("info");
     setDevOtpHint("");
     setDevMagicLink("");
+    setOtpCode("");
   }, [method]);
+
+  useEffect(() => {
+    if (method !== "phone") {
+      return;
+    }
+
+    if (otpCode.trim().length !== OTP_LENGTH || !canSubmit) {
+      return;
+    }
+
+    formRef.current?.requestSubmit();
+  }, [canSubmit, method, otpCode]);
+
+  function handleOtpChange(value: string) {
+    if (method === "phone") {
+      setOtpCode(value.replace(/\D/g, "").slice(0, OTP_LENGTH));
+      return;
+    }
+
+    setOtpCode(value.trimStart().slice(0, 24));
+  }
 
   async function onRequestOtp() {
     if (!phone.trim()) {
@@ -94,6 +134,8 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
       }
       setMessage(payload.message ?? "Verification code sent.");
       setMessageTone("success");
+      setOtpCooldown(OTP_RESEND_SECONDS);
+      window.setTimeout(() => otpInputRef.current?.focus(), 0);
       if (payload.devCode) {
         setDevOtpHint(`Dev code: ${payload.devCode}`);
       }
@@ -228,38 +270,50 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
             />
             <div className="absolute inset-0 bg-linear-to-t from-[#07070b] via-[#07070baa] to-transparent p-5">
               <p className="inline-flex rounded-full border border-emerald-300/40 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
-                Secure access
+                Live Dating + Creator Rooms
               </p>
               <h3 className="app-title mt-3 max-w-md text-2xl font-semibold sm:text-3xl">
-                Continue your story with people who match your energy.
+                Meet, chat, and go live instantly.
               </h3>
               <p className="mt-2 max-w-md text-sm text-white/85">
-                Love-forward matching, affectionate conversations, and a safer premium experience - all in one dashboard.
+                Join live rooms, match instantly, and connect in real-time.
               </p>
-              <ul className="mt-5 space-y-2 text-sm text-white/85">
-                <li>- Login protection with lockout and audit tracing</li>
-                <li>- Session-aware age-gated routing</li>
-                <li>- FICA and moderation pipeline ready</li>
+              <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                <p className="rounded-full border border-white/20 bg-black/30 px-3 py-1 text-white/90">12,000+ users online</p>
+                <p className="rounded-full border border-white/20 bg-black/30 px-3 py-1 text-white/90">4.8 average rating</p>
+              </div>
+              <ul className="mt-5 space-y-2 text-sm text-white/90">
+                <li>Secure and private chats</li>
+                <li>Live rooms and instant matching</li>
+                <li>Moderated, safer environment</li>
               </ul>
             </div>
           </div>
         </article>
 
-        <form className="app-surface app-section p-6" onSubmit={onSubmit}>
+        <form
+          ref={formRef}
+          className="app-surface app-section border border-white/10 bg-white/[0.03] p-6 shadow-[0_10px_40px_rgba(0,0,0,0.4)] backdrop-blur-sm"
+          onSubmit={onSubmit}
+        >
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-accent-strong">Access Portal</p>
           <h2 className="app-title mt-2 text-xl font-semibold">Sign in</h2>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="relative mt-3 grid grid-cols-2 gap-1 rounded-xl border border-white/15 bg-black/30 p-1">
+            <span
+              aria-hidden="true"
+              className={`pointer-events-none absolute bottom-1 top-1 w-[calc(50%-0.25rem)] rounded-lg border border-accent/30 bg-accent/15 transition-transform duration-200 ${method === "phone" ? "translate-x-0" : "translate-x-full"}`}
+            />
             <button
               type="button"
               onClick={() => setMethod("phone")}
-              className={`rounded-xl border px-3 py-2 text-xs font-semibold ${method === "phone" ? "border-accent/60 bg-accent/12 text-accent-strong" : "border-white/15 bg-white/5 text-text-muted"}`}
+              className={`relative z-10 rounded-lg px-3 py-2 text-xs font-semibold transition ${method === "phone" ? "text-accent-strong" : "text-text-muted"}`}
             >
               Phone OTP
             </button>
             <button
               type="button"
               onClick={() => setMethod("email")}
-              className={`rounded-xl border px-3 py-2 text-xs font-semibold ${method === "email" ? "border-accent/60 bg-accent/12 text-accent-strong" : "border-white/15 bg-white/5 text-text-muted"}`}
+              className={`relative z-10 rounded-lg px-3 py-2 text-xs font-semibold transition ${method === "email" ? "text-accent-strong" : "text-text-muted"}`}
             >
               Email login
             </button>
@@ -282,25 +336,40 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
                 <button
                   type="button"
                   onClick={onRequestOtp}
-                  disabled={!canRequestOtp}
+                  disabled={!canResendOtp}
                   className="rounded-full border border-white/25 px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
                 >
-                  Send OTP
+                  {submitting ? "Sending..." : otpCooldown > 0 ? `Resend in ${otpCooldown}s` : "Send OTP"}
                 </button>
               </div>
               <label className="mt-4 block text-sm text-text-muted">
                 OTP code
                 <input
+                  ref={otpInputRef}
                   type="text"
                   value={otpCode}
-                  onChange={(event) => setOtpCode(event.target.value)}
+                  onChange={(event) => handleOtpChange(event.target.value)}
                   inputMode="numeric"
-                  placeholder="123456"
+                  placeholder="6-digit code"
                   autoComplete="one-time-code"
                   required
                   className="app-input mt-1 w-full rounded-xl px-3 py-2"
                 />
               </label>
+              {otpCode.length > 0 && otpCode.length < OTP_LENGTH ? (
+                <p className="mt-1 text-xs text-amber-300">Enter all 6 digits to continue.</p>
+              ) : null}
+              <div className="mt-2 text-xs text-text-muted">
+                <span>Did not get a code? </span>
+                <button
+                  type="button"
+                  onClick={onRequestOtp}
+                  disabled={!canResendOtp}
+                  className="underline underline-offset-2 disabled:no-underline disabled:opacity-60"
+                >
+                  {otpCooldown > 0 ? `Resend in ${otpCooldown}s` : "Resend"}
+                </button>
+              </div>
             </>
           ) : null}
 
@@ -360,7 +429,7 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
             <input
               type="text"
               value={otpCode}
-              onChange={(event) => setOtpCode(event.target.value)}
+              onChange={(event) => handleOtpChange(event.target.value)}
               inputMode="numeric"
               placeholder="123456 or ABCD-EFGH"
               className="app-input mt-1 w-full rounded-xl px-3 py-2"
@@ -401,13 +470,13 @@ export function SignInClient({ initialNextPath, initialMessage }: SignInClientPr
           <button
             type="submit"
             disabled={!canSubmit}
-            className="app-cta mt-5 w-full rounded-full px-5 py-2 text-sm font-semibold transition disabled:opacity-50"
+            className="app-cta mt-6 w-full rounded-full px-5 py-3 text-sm font-semibold transition hover:shadow-[0_0_24px_rgba(16,185,129,0.35)] disabled:opacity-50"
           >
             {submitting ? "Signing in..." : "Enter Hookchat"}
           </button>
 
           <p className="mt-3 text-xs text-text-muted">
-            Need an account? <Link href="/auth/sign-up" className="underline">Create one</Link>
+            New here? <Link href="/auth/sign-up" className="underline">Join in 10 seconds</Link>
           </p>
         </form>
       </div>
