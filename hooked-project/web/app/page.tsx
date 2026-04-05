@@ -20,9 +20,9 @@ const productPillars = [
 ];
 
 const creatorSpotlights = [
-  { name: "Mila", image: "/cover-mila.svg", online: "Live now" },
-  { name: "Nia", image: "/cover-nia.svg", online: "Audience waiting" },
-  { name: "Ari", image: "/cover-ari.svg", online: "New content" },
+  { name: "Mila", image: "/images/romantic-creator-1.jpg", online: "Live now" },
+  { name: "Nia", image: "/images/romantic-creator-2.jpg", online: "Audience waiting" },
+  { name: "Ari", image: "/images/romantic-creator-3.jpg", online: "New content" },
 ];
 
 const conversionMoments = [
@@ -56,18 +56,18 @@ const funnelSteps = [
 ];
 
 const photoWall = [
-  { name: "Mila", image: "/profile-mila.svg" },
-  { name: "Nia", image: "/profile-nia.svg" },
-  { name: "Ari", image: "/profile-ari.svg" },
-  { name: "Skye", image: "/profile-skye.svg" },
-  { name: "Avery", image: "/profile-avery.svg" },
-  { name: "Jules", image: "/profile-jules.svg" },
+  { name: "Mila", image: "/images/romantic-creator-1.jpg" },
+  { name: "Nia", image: "/images/romantic-creator-2.jpg" },
+  { name: "Ari", image: "/images/romantic-creator-3.jpg" },
+  { name: "Date Night", image: "/images/romantic-gallery-1.jpg" },
+  { name: "Lounge", image: "/images/romantic-gallery-2.jpg" },
+  { name: "Sunset", image: "/images/romantic-gallery-3.jpg" },
 ];
 
 const premiumScenes = [
-  { title: "Neon After Dark", image: "/asset-neon-card.svg" },
-  { title: "Velvet Lounge", image: "/asset-velvet-card.svg" },
-  { title: "Private Lounge", image: "/asset-lounge-card.svg" },
+  { title: "Neon After Dark", image: "/images/romantic-gallery-1.jpg" },
+  { title: "Velvet Lounge", image: "/images/romantic-gallery-2.jpg" },
+  { title: "Private Lounge", image: "/images/romantic-gallery-3.jpg" },
 ];
 
 const footerNav = {
@@ -150,8 +150,8 @@ export default function HomePage() {
         <article className="reveal-rise reveal-rise-delay-1 sexy-frame rounded-3xl p-4 sm:p-5">
           <div className="relative overflow-hidden rounded-2xl border border-white/10">
             <Image
-              src="/asset-hero-orbit.svg"
-              alt="Hooked interface orbit"
+              src="/images/romantic-hero.jpg"
+              alt="Romantic couple in city lights"
               width={1400}
               height={1000}
               className="h-48 w-full object-cover sm:h-56"
@@ -221,9 +221,9 @@ export default function HomePage() {
         <article className="app-surface reveal-rise reveal-rise-delay-1 rounded-3xl p-6">
           <p className="font-mono text-xs uppercase tracking-[0.16em] text-signal">Visual feed preview</p>
           <div className="mt-4 grid grid-cols-3 gap-2">
-            <Image src="/gallery-neon.svg" alt="Neon gallery preview" width={420} height={420} className="h-28 w-full rounded-xl object-cover" />
-            <Image src="/gallery-teal.svg" alt="Teal gallery preview" width={420} height={420} className="h-28 w-full rounded-xl object-cover" />
-            <Image src="/gallery-gold.svg" alt="Gold gallery preview" width={420} height={420} className="h-28 w-full rounded-xl object-cover" />
+            <Image src="/images/romantic-gallery-1.jpg" alt="Neon gallery preview" width={420} height={420} className="h-28 w-full rounded-xl object-cover" />
+            <Image src="/images/romantic-gallery-2.jpg" alt="Lounge gallery preview" width={420} height={420} className="h-28 w-full rounded-xl object-cover" />
+            <Image src="/images/romantic-gallery-3.jpg" alt="Sunset gallery preview" width={420} height={420} className="h-28 w-full rounded-xl object-cover" />
           </div>
           <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
             Safety gates active: age verification required for wallet, calls, and premium interactions.
