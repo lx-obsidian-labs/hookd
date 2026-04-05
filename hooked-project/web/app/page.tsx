@@ -216,6 +216,61 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
+
+      <footer className="relative z-10 mx-auto mt-8 w-full max-w-6xl rounded-3xl border border-white/10 bg-[#09111d]/80 p-6 sm:p-8">
+        <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
+          <section>
+            <p className="font-mono text-xs uppercase tracking-[0.16em] text-accent-strong">Hooked platform</p>
+            <h3 className="mt-2 text-lg font-semibold">Built for conversation-first conversion</h3>
+            <p className="mt-2 max-w-md text-sm text-text-muted">
+              Hooked blends dating discovery with creator monetization using transparent token pricing, per-minute call billing, and enforced compliance gates.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs">
+              <p className="rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1 text-emerald-100">Age-gated premium surfaces</p>
+              <p className="rounded-full border border-sky-300/30 bg-sky-400/10 px-3 py-1 text-sky-100">Session-auth protected APIs</p>
+              <p className="rounded-full border border-orange-300/30 bg-orange-400/10 px-3 py-1 text-orange-100">Audit-ready event trail</p>
+            </div>
+          </section>
+
+          <section>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/60">Explore</p>
+            <nav className="mt-3 space-y-2 text-sm">
+              <Link href="/discover" className="block text-white/85 transition hover:text-white">Discover</Link>
+              <Link href="/matches" className="block text-white/85 transition hover:text-white">Matches</Link>
+              <Link href="/chat" className="block text-white/85 transition hover:text-white">Chat</Link>
+              <Link href="/calls" className="block text-white/85 transition hover:text-white">Calls</Link>
+            </nav>
+          </section>
+
+          <section>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/60">Trust and billing</p>
+            <nav className="mt-3 space-y-2 text-sm">
+              <Link href="/verify-age" className="block text-white/85 transition hover:text-white">Age verification</Link>
+              <Link href="/safety" className="block text-white/85 transition hover:text-white">Safety center</Link>
+              <Link href="/wallet" className="block text-white/85 transition hover:text-white">Wallet and receipts</Link>
+              <Link href="/profile" className="block text-white/85 transition hover:text-white">Account settings</Link>
+            </nav>
+          </section>
+
+          <section>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/60">Get started</p>
+            <div className="mt-3 space-y-3">
+              <Link href="/auth/sign-up" className="app-cta inline-flex rounded-full px-4 py-2 text-sm font-semibold">
+                Create account
+              </Link>
+              <p className="text-sm text-text-muted">Already a member?</p>
+              <Link href="/auth/sign-in" className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white/90 transition hover:border-white/40">
+                Sign in
+              </Link>
+            </div>
+          </section>
+        </div>
+
+        <div className="mt-8 border-t border-white/10 pt-4 text-xs text-white/55 sm:flex sm:items-center sm:justify-between">
+          <p>Hooked - Dating + Creator Platform</p>
+          <p className="mt-2 sm:mt-0">Crafted by Siphesihle Nathan Vilane | Lx Obsidian Labs</p>
+        </div>
+      </footer>
     </main>
   );
 }
