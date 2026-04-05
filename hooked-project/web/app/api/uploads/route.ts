@@ -5,6 +5,9 @@ import { NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/server/audit-log";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
 import { getClientIp, getUserAgent } from "@/lib/server/request-meta";
+import { requireAuthenticatedSession } from "@/lib/server/session-auth";
+import { canUploadCategoryForRole, type UploadCategory } from "@/lib/server/upload-policy";
+import { getAccountProfileForAuthorization } from "@/lib/server/user-store";
 
 export const runtime = "nodejs";
 
@@ -29,7 +32,7 @@ const categoryRules = {
   },
 } as const;
 
-type Category = keyof typeof categoryRules;
+type Category = UploadCategory;
 
 function extFromMime(mime: string) {
   const map: Record<string, string> = {
@@ -47,8 +50,19 @@ function extFromMime(mime: string) {
 export async function POST(request: Request) {
   const ip = getClientIp(request);
   const userAgent = getUserAgent(request);
+  const session = await requireAuthenticatedSession();
+  if (!session.ok) {
+    return session.response;
+  }
+
+  const actorAccountId = session.accountId;
+  const actorProfile = await getAccountProfileForAuthorization(actorAccountId);
+  if (!actorProfile.ok) {
+    return NextResponse.json({ ok: false, message: actorProfile.message }, { status: 401 });
+  }
+
   const limit = await enforceRateLimit({
-    key: `uploads:${ip}`,
+    key: `uploads:${actorAccountId}:${ip}`,
     limit: 20,
     windowMs: 60_000,
   });
@@ -76,6 +90,13 @@ export async function POST(request: Request) {
   const category = categoryRaw as Category;
   const rules = categoryRules[category];
 
+  if (!canUploadCategoryForRole(actorProfile.profile.role, category)) {
+    return NextResponse.json(
+      { ok: false, message: "Your account role cannot upload this file category." },
+      { status: 403 },
+    );
+  }
+
   if (!rules.allowedTypes.has(file.type)) {
     return NextResponse.json({ ok: false, message: "Unsupported file type." }, { status: 415 });
   }
@@ -97,10 +118,10 @@ export async function POST(request: Request) {
 
   await writeAuditLog({
     action: "upload.created",
-    actor: "session-user",
+    actor: actorAccountId,
     ip,
     userAgent,
-    details: { category, mimeType: file.type, size: file.size },
+    details: { category, mimeType: file.type, size: file.size, role: actorProfile.profile.role },
   });
 
   return NextResponse.json({

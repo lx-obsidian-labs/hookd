@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { requireAuthenticatedSession } from "@/lib/server/session-auth";
 import { getSecuritySnapshotForAccount } from "@/lib/server/user-store";
 
 export async function GET() {
-  const jar = await cookies();
-  const accountId = jar.get("hooked_session")?.value;
-  if (!accountId) {
-    return NextResponse.json({ ok: false, message: "No active session." }, { status: 401 });
+  const session = await requireAuthenticatedSession();
+  if (!session.ok) {
+    return session.response;
   }
+  const { accountId } = session;
 
   const snapshot = await getSecuritySnapshotForAccount(accountId);
   if (!snapshot.ok) {

@@ -57,6 +57,38 @@ export async function createSessionRecord(input: {
   return record;
 }
 
+export async function getActiveSessionRecord(sessionId: string) {
+  const normalizedSessionId = sessionId.trim();
+  if (!normalizedSessionId) {
+    return null;
+  }
+
+  const sessions = compactSessions(await readSessions());
+  const now = Date.now();
+  const index = sessions.findIndex((session) => {
+    if (session.id !== normalizedSessionId) {
+      return false;
+    }
+    if (session.revokedAt) {
+      return false;
+    }
+    return new Date(session.expiresAt).getTime() > now;
+  });
+
+  if (index === -1) {
+    await writeSessions(sessions);
+    return null;
+  }
+
+  const updatedSession: SessionRecord = {
+    ...sessions[index],
+    lastSeenAt: new Date().toISOString(),
+  };
+  sessions[index] = updatedSession;
+  await writeSessions(sessions);
+  return updatedSession;
+}
+
 export async function revokeSessionRecord(sessionId: string) {
   const sessions = compactSessions(await readSessions());
   const index = sessions.findIndex((item) => item.id === sessionId);
@@ -65,6 +97,26 @@ export async function revokeSessionRecord(sessionId: string) {
   }
   sessions[index] = { ...sessions[index], revokedAt: new Date().toISOString() };
   await writeSessions(sessions);
+}
+
+export async function revokeSessionRecordForAccount(sessionId: string, accountId: string) {
+  const normalizedSessionId = sessionId.trim();
+  const normalizedAccountId = accountId.trim();
+  if (!normalizedSessionId || !normalizedAccountId) {
+    return false;
+  }
+
+  const sessions = compactSessions(await readSessions());
+  const index = sessions.findIndex(
+    (item) => item.id === normalizedSessionId && item.accountId === normalizedAccountId,
+  );
+  if (index === -1) {
+    return false;
+  }
+
+  sessions[index] = { ...sessions[index], revokedAt: new Date().toISOString() };
+  await writeSessions(sessions);
+  return true;
 }
 
 export async function listActiveSessionsForAccount(accountId: string) {

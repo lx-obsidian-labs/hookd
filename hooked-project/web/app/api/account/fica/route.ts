@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { writeAuditLog } from "@/lib/server/audit-log";
+import { requireAuthenticatedSession } from "@/lib/server/session-auth";
 import { submitFicaForUser } from "@/lib/server/user-store";
 
 export async function POST(request: Request) {
-  const jar = await cookies();
-  const accountId = jar.get("hooked_session")?.value;
-  if (!accountId) {
-    return NextResponse.json({ ok: false, message: "No active session." }, { status: 401 });
+  const session = await requireAuthenticatedSession();
+  if (!session.ok) {
+    return session.response;
   }
+  const { accountId } = session;
 
   let body: {
     legalName?: string;

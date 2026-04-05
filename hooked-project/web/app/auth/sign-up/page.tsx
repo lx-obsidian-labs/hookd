@@ -9,6 +9,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
+type UploadCategory = "profile-picture" | "saved-picture" | "saved-video" | "fica-document";
+
 function passwordChecks(password: string) {
   return [
     { label: "8+ characters", ok: password.length >= 8 },
@@ -55,7 +57,7 @@ export default function SignUpPage() {
   const checks = passwordChecks(password);
   const passwordReady = checks.every((item) => item.ok);
 
-  async function uploadAsset(category: "profile-picture" | "saved-picture" | "saved-video" | "fica-document", file: File) {
+  async function uploadAsset(category: UploadCategory, file: File) {
     const formData = new FormData();
     formData.append("category", category);
     formData.append("file", file);
@@ -83,7 +85,12 @@ export default function SignUpPage() {
       setProfilePictureUrl(url);
       setMessage("Profile picture uploaded.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not upload profile picture.");
+      const message = error instanceof Error ? error.message : "Could not upload profile picture.";
+      if (message.toLowerCase().includes("no active session") || message.toLowerCase().includes("invalid or expired")) {
+        setMessage("Profile picture will upload after account creation.");
+      } else {
+        setMessage(message);
+      }
     } finally {
       setUploading(false);
     }
@@ -101,7 +108,12 @@ export default function SignUpPage() {
       setFicaDocumentUrl(url);
       setMessage("FICA document uploaded.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not upload FICA document.");
+      const message = error instanceof Error ? error.message : "Could not upload FICA document.";
+      if (message.toLowerCase().includes("no active session") || message.toLowerCase().includes("invalid or expired")) {
+        setMessage("FICA document will upload after account creation.");
+      } else {
+        setMessage(message);
+      }
     } finally {
       setUploading(false);
     }
@@ -128,84 +140,170 @@ export default function SignUpPage() {
       return;
     }
     setSubmitting(true);
-    const requestedNextPath =
-      typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search).get("next")
-        : null;
-    const response = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        password,
-        displayName,
-        firstName,
-        surname,
-        username,
-        role,
-        age,
-        city,
-        gender,
-        lookingFor,
-        interestedInHookups,
-        profilePictureUrl,
-        description,
-        nicheTags: nicheTagsInput
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-        savedPics: savedPicsInput
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-        savedVideos: savedVideosInput
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-        ficaLegalName,
-        ficaIdNumber,
-        ficaDocumentUrl,
-        ficaConsent,
-        nextPath: requestedNextPath ?? undefined,
-      }),
-    });
-    const result = (await response.json()) as {
-      ok: boolean;
-      message?: string;
-      account?: {
-        id: string;
-        email: string;
-        displayName: string;
-        role: AccountRole;
-        age: number;
-        city: string;
-        ageVerified: boolean;
-        ageVerifiedAt: string | null;
-        createdAt: string;
+    try {
+      const requestedNextPath =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("next")
+          : null;
+
+      const manualProfilePictureUrl = profilePictureUrl.trim();
+      const manualFicaDocumentUrl = ficaDocumentUrl.trim();
+      const wantsFicaSubmission = Boolean(
+        ficaConsent ||
+          ficaLegalName.trim() ||
+          ficaIdNumber.trim() ||
+          manualFicaDocumentUrl ||
+          ficaDocumentFile,
+      );
+      const submitFicaInRegistration = wantsFicaSubmission && Boolean(manualFicaDocumentUrl);
+
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          displayName,
+          firstName,
+          surname,
+          username,
+          role,
+          age,
+          city,
+          gender,
+          lookingFor,
+          interestedInHookups,
+          profilePictureUrl: manualProfilePictureUrl,
+          description,
+          nicheTags: nicheTagsInput
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean),
+          savedPics: savedPicsInput
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean),
+          savedVideos: savedVideosInput
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean),
+          ficaLegalName: submitFicaInRegistration ? ficaLegalName : "",
+          ficaIdNumber: submitFicaInRegistration ? ficaIdNumber : "",
+          ficaDocumentUrl: submitFicaInRegistration ? manualFicaDocumentUrl : "",
+          ficaConsent: submitFicaInRegistration ? ficaConsent : false,
+          nextPath: requestedNextPath ?? undefined,
+        }),
+      });
+      const result = (await response.json()) as {
+        ok: boolean;
+        message?: string;
+        account?: {
+          id: string;
+          email: string;
+          displayName: string;
+          role: AccountRole;
+          age: number;
+          city: string;
+          ageVerified: boolean;
+          ageVerifiedAt: string | null;
+          createdAt: string;
+        };
+        nextPath?: string;
       };
-      nextPath?: string;
-    };
-    setSubmitting(false);
 
-    if (!result.ok || !result.account) {
-      setMessage(result.message ?? "Could not create account.");
-      return;
+      if (!result.ok || !result.account) {
+        setMessage(result.message ?? "Could not create account.");
+        return;
+      }
+
+      syncSessionAccount(result.account);
+
+      if (optInMarketing) {
+        window.localStorage.setItem("hooked.marketing-opt-in", "1");
+      }
+
+      const postSignupWarnings: string[] = [];
+      let resolvedProfilePictureUrl = manualProfilePictureUrl;
+      let resolvedFicaDocumentUrl = manualFicaDocumentUrl;
+
+      if (!resolvedProfilePictureUrl && profilePictureFile) {
+        try {
+          setMessage("Account created. Uploading profile picture...");
+          resolvedProfilePictureUrl = await uploadAsset("profile-picture", profilePictureFile);
+          setProfilePictureUrl(resolvedProfilePictureUrl);
+        } catch (error) {
+          postSignupWarnings.push(error instanceof Error ? error.message : "Profile picture upload failed.");
+        }
+      }
+
+      if (resolvedProfilePictureUrl && resolvedProfilePictureUrl !== manualProfilePictureUrl) {
+        try {
+          await fetch("/api/profile/basic", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              displayName,
+              gender,
+              city,
+              lookingFor,
+              profilePictureUrl: resolvedProfilePictureUrl,
+            }),
+          });
+        } catch {
+          postSignupWarnings.push("Profile update could not be finalized.");
+        }
+      }
+
+      if (!submitFicaInRegistration && wantsFicaSubmission) {
+        if (!resolvedFicaDocumentUrl && ficaDocumentFile) {
+          try {
+            setMessage("Uploading FICA document...");
+            resolvedFicaDocumentUrl = await uploadAsset("fica-document", ficaDocumentFile);
+            setFicaDocumentUrl(resolvedFicaDocumentUrl);
+          } catch (error) {
+            postSignupWarnings.push(error instanceof Error ? error.message : "FICA document upload failed.");
+          }
+        }
+
+        if (resolvedFicaDocumentUrl) {
+          try {
+            const ficaResponse = await fetch("/api/account/fica", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                legalName: ficaLegalName,
+                idNumber: ficaIdNumber,
+                documentUrl: resolvedFicaDocumentUrl,
+                consent: ficaConsent,
+              }),
+            });
+            const ficaResult = (await ficaResponse.json()) as { ok: boolean; message?: string };
+            if (!ficaResult.ok) {
+              postSignupWarnings.push(ficaResult.message ?? "FICA submission failed.");
+            }
+          } catch {
+            postSignupWarnings.push("FICA submission could not be completed.");
+          }
+        } else {
+          postSignupWarnings.push("FICA document was not uploaded. You can finish this in Safety later.");
+        }
+      }
+
+      const nextPath = resolvePostAuthPath({
+        role: result.account.role,
+        requestedPath: result.nextPath,
+      });
+      if (postSignupWarnings.length) {
+        setMessage(`Account created. Some uploads need attention: ${postSignupWarnings[0]}`);
+      } else {
+        setMessage("Account created successfully. Preparing your dashboard...");
+      }
+      window.setTimeout(() => {
+        router.push(nextPath);
+      }, 400);
+    } finally {
+      setSubmitting(false);
     }
-
-    syncSessionAccount(result.account);
-
-    if (optInMarketing) {
-      window.localStorage.setItem("hooked.marketing-opt-in", "1");
-    }
-
-    const nextPath = resolvePostAuthPath({
-      role: result.account.role,
-      requestedPath: result.nextPath,
-    });
-    setMessage("Account created successfully. Preparing your dashboard...");
-    window.setTimeout(() => {
-      router.push(nextPath);
-    }, 400);
   }
 
   return (

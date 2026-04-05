@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { writeAuditLog } from "@/lib/server/audit-log";
+import { requireAuthenticatedSession } from "@/lib/server/session-auth";
 import {
   beginTwoFactorSetup,
   completeTwoFactorSetup,
@@ -10,11 +10,11 @@ import {
 } from "@/lib/server/user-store";
 
 export async function GET() {
-  const jar = await cookies();
-  const accountId = jar.get("hooked_session")?.value;
-  if (!accountId) {
-    return NextResponse.json({ ok: false, message: "No active session." }, { status: 401 });
+  const session = await requireAuthenticatedSession();
+  if (!session.ok) {
+    return session.response;
   }
+  const { accountId } = session;
 
   const result = await getSecuritySnapshotForAccount(accountId);
   if (!result.ok) {
@@ -25,11 +25,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const jar = await cookies();
-  const accountId = jar.get("hooked_session")?.value;
-  if (!accountId) {
-    return NextResponse.json({ ok: false, message: "No active session." }, { status: 401 });
+  const session = await requireAuthenticatedSession();
+  if (!session.ok) {
+    return session.response;
   }
+  const { accountId } = session;
 
   let body: {
     action?: "begin_2fa" | "verify_2fa" | "disable_2fa" | "generate_backup_codes";

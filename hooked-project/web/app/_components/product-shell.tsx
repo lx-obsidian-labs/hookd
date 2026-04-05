@@ -268,6 +268,10 @@ export function ProductShell({
     setSearchOpen(false);
   }
 
+  function onGuestTopTabClick(href: string) {
+    router.push(`/auth/sign-in?next=${encodeURIComponent(href)}`);
+  }
+
   function topTabCount(href: string) {
     if (href === "/chat") {
       return unreadChatCount > 0 ? `${unreadChatCount} unread` : "inbox";
@@ -482,6 +486,7 @@ export function ProductShell({
         </div>
         <nav className="flex gap-6 overflow-x-auto border-t border-white/6 bg-[#222730] px-4 py-2 text-sm text-white/85 sm:px-5">
           {topTabs.map((tab) => (
+            accountForRender ? (
             <Link
               key={tab.label}
               href={tab.href}
@@ -499,6 +504,24 @@ export function ProductShell({
                   </span>
               </span>
             </Link>
+            ) : (
+              <button
+                key={tab.label}
+                type="button"
+                onClick={() => onGuestTopTabClick(tab.href)}
+                className="app-nav-link inline-flex items-center gap-2 opacity-85 transition hover:opacity-100"
+                title="Preview only - sign in to unlock"
+                aria-label={`${tab.label} preview. Sign in required.`}
+              >
+                <span>{tab.label}</span>
+                <span className="rounded-full border border-white/25 bg-white/10 px-1.5 py-0.5 text-[10px] text-white/85">
+                  Preview
+                </span>
+                <span className="rounded-full border border-white/20 bg-black/30 px-1.5 py-0.5 text-[10px] text-white/75">
+                  Lock
+                </span>
+              </button>
+            )
           ))}
         </nav>
       </header>

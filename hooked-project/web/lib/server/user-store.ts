@@ -998,6 +998,24 @@ export async function getSecuritySnapshotForAccount(accountId: string) {
   };
 }
 
+export async function getAccountProfileForAuthorization(accountId: string) {
+  const users = await readUsers();
+  const user = users.find((item) => item.id === accountId);
+  if (!user) {
+    return { ok: false as const, message: "Account not found." };
+  }
+
+  return {
+    ok: true as const,
+    profile: {
+      accountId: user.id,
+      role: user.role,
+      ageVerified: user.ageVerified,
+      ficaStatus: user.fica.status,
+    },
+  };
+}
+
 export async function updatePhotoModerationStatus(input: {
   accountId: string;
   status: "none" | "pending" | "approved" | "rejected";

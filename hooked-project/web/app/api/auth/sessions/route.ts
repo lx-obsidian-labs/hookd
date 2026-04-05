@@ -1,20 +1,19 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import {
   listActiveSessionsForAccount,
   revokeOtherSessionsForAccount,
-  revokeSessionRecord,
+  revokeSessionRecordForAccount,
 } from "@/lib/server/session-store";
+import { requireAuthenticatedSession } from "@/lib/server/session-auth";
 
 export async function GET() {
-  const jar = await cookies();
-  const accountId = jar.get("hooked_session")?.value;
-  if (!accountId) {
-    return NextResponse.json({ ok: false, message: "No active session." }, { status: 401 });
+  const session = await requireAuthenticatedSession();
+  if (!session.ok) {
+    return session.response;
   }
+  const { accountId, sessionToken } = session;
 
   const sessions = await listActiveSessionsForAccount(accountId);
-  const currentToken = jar.get("hooked_session_token")?.value;
   return NextResponse.json({
     ok: true,
     sessions: sessions.map((session) => ({
@@ -23,18 +22,17 @@ export async function GET() {
       ip: session.ip,
       createdAt: session.createdAt,
       lastSeenAt: session.lastSeenAt,
-      current: currentToken === session.id,
+      current: sessionToken === session.id,
     })),
   });
 }
 
 export async function DELETE(request: Request) {
-  const jar = await cookies();
-  const accountId = jar.get("hooked_session")?.value;
-  const currentToken = jar.get("hooked_session_token")?.value;
-  if (!accountId) {
-    return NextResponse.json({ ok: false, message: "No active session." }, { status: 401 });
+  const session = await requireAuthenticatedSession();
+  if (!session.ok) {
+    return session.response;
   }
+  const { accountId, sessionToken } = session;
 
   let body: { sessionId?: string; revokeOthers?: boolean };
   try {
@@ -44,10 +42,7 @@ export async function DELETE(request: Request) {
   }
 
   if (body.revokeOthers) {
-    if (!currentToken) {
-      return NextResponse.json({ ok: false, message: "Current session token missing." }, { status: 400 });
-    }
-    const revoked = await revokeOtherSessionsForAccount(accountId, currentToken);
+    const revoked = await revokeOtherSessionsForAccount(accountId, sessionToken);
     return NextResponse.json({ ok: true, revoked });
   }
 
@@ -56,6 +51,9 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ ok: false, message: "sessionId is required." }, { status: 400 });
   }
 
-  await revokeSessionRecord(sessionId);
+  const revoked = await revokeSessionRecordForAccount(sessionId, accountId);
+  if (!revoked) {
+    return NextResponse.json({ ok: false, message: "Session not found." }, { status: 404 });
+  }
   return NextResponse.json({ ok: true });
 }

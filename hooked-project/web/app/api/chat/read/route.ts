@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { writeAuditLog } from "@/lib/server/audit-log";
 import { getClientIp, getUserAgent } from "@/lib/server/request-meta";
+import { requireAuthenticatedSession } from "@/lib/server/session-auth";
 import { getReadMarkersForAccount, setReadMarkerForAccount } from "@/lib/server/user-store";
 
 type ReadMarkerBody = {
@@ -12,11 +12,11 @@ type ReadMarkerBody = {
 export async function GET(request: Request) {
   const ip = getClientIp(request);
   const userAgent = getUserAgent(request);
-  const jar = await cookies();
-  const accountId = jar.get("hooked_session")?.value;
-  if (!accountId) {
-    return NextResponse.json({ ok: false, message: "No active session." }, { status: 401 });
+  const session = await requireAuthenticatedSession();
+  if (!session.ok) {
+    return session.response;
   }
+  const { accountId } = session;
 
   const result = await getReadMarkersForAccount(accountId);
   if (!result.ok) {
@@ -37,11 +37,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const ip = getClientIp(request);
   const userAgent = getUserAgent(request);
-  const jar = await cookies();
-  const accountId = jar.get("hooked_session")?.value;
-  if (!accountId) {
-    return NextResponse.json({ ok: false, message: "No active session." }, { status: 401 });
+  const session = await requireAuthenticatedSession();
+  if (!session.ok) {
+    return session.response;
   }
+  const { accountId } = session;
 
   let body: ReadMarkerBody;
   try {
