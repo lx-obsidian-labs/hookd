@@ -55,6 +55,34 @@ const funnelSteps = [
   { name: "Call", detail: "Start private sessions with live spend metering." },
 ];
 
+const footerNav = {
+  explore: [
+    { href: "/discover", label: "Discover" },
+    { href: "/matches", label: "Matches" },
+    { href: "/chat", label: "Chat" },
+    { href: "/calls", label: "Calls" },
+  ],
+  trust: [
+    { href: "/verify-age", label: "Age verification" },
+    { href: "/safety", label: "Safety center" },
+    { href: "/wallet", label: "Wallet and receipts" },
+    { href: "/profile", label: "Account settings" },
+  ],
+};
+
+function FooterLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="group inline-flex items-center gap-2 text-white/85 transition hover:text-white"
+    >
+      <span className="h-1 w-1 rounded-full bg-white/35 transition group-hover:bg-accent-strong" />
+      <span>{label}</span>
+      <span className="text-white/40 transition group-hover:translate-x-0.5 group-hover:text-white/70">{"->"}</span>
+    </Link>
+  );
+}
+
 export default function HomePage() {
   return (
     <main className="relative min-h-screen overflow-x-clip px-4 pb-20 pt-6 sm:px-6 lg:px-10">
@@ -235,20 +263,18 @@ export default function HomePage() {
           <section>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/60">Explore</p>
             <nav className="mt-3 space-y-2 text-sm">
-              <Link href="/discover" className="block text-white/85 transition hover:text-white">Discover</Link>
-              <Link href="/matches" className="block text-white/85 transition hover:text-white">Matches</Link>
-              <Link href="/chat" className="block text-white/85 transition hover:text-white">Chat</Link>
-              <Link href="/calls" className="block text-white/85 transition hover:text-white">Calls</Link>
+              {footerNav.explore.map((item) => (
+                <FooterLink key={item.href} href={item.href} label={item.label} />
+              ))}
             </nav>
           </section>
 
           <section>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/60">Trust and billing</p>
             <nav className="mt-3 space-y-2 text-sm">
-              <Link href="/verify-age" className="block text-white/85 transition hover:text-white">Age verification</Link>
-              <Link href="/safety" className="block text-white/85 transition hover:text-white">Safety center</Link>
-              <Link href="/wallet" className="block text-white/85 transition hover:text-white">Wallet and receipts</Link>
-              <Link href="/profile" className="block text-white/85 transition hover:text-white">Account settings</Link>
+              {footerNav.trust.map((item) => (
+                <FooterLink key={item.href} href={item.href} label={item.label} />
+              ))}
             </nav>
           </section>
 
@@ -267,8 +293,17 @@ export default function HomePage() {
         </div>
 
         <div className="mt-8 border-t border-white/10 pt-4 text-xs text-white/55 sm:flex sm:items-center sm:justify-between">
-          <p>Hooked - Dating + Creator Platform</p>
-          <p className="mt-2 sm:mt-0">Crafted by Siphesihle Nathan Vilane | Lx Obsidian Labs</p>
+          <div>
+            <p>Hooked - Dating + Creator Platform</p>
+            <p className="mt-1 text-[11px] text-white/45">Respectful interactions only. Premium features require verified access.</p>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] sm:mt-0 sm:justify-end">
+            <span className="text-white/45">Crafted by Siphesihle Nathan Vilane | Lx Obsidian Labs</span>
+            <span className="text-white/30">|</span>
+            <Link href="/safety" className="text-white/55 transition hover:text-white">Community standards</Link>
+            <span className="text-white/30">|</span>
+            <Link href="/wallet" className="text-white/55 transition hover:text-white">Billing transparency</Link>
+          </div>
         </div>
       </footer>
     </main>
