@@ -123,12 +123,12 @@ export default function HomePage() {
           <p className="neon-pill inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
             Production-first MVP
           </p>
-          <h1 className="editorial-title mt-4 text-4xl font-bold sm:text-5xl lg:text-6xl">
+          <h1 className="editorial-title mt-4 text-4xl font-bold leading-tight sm:text-6xl lg:text-7xl">
             Build matches first.
             <br />
             Monetize intent second.
           </h1>
-          <p className="app-subtitle mt-4 max-w-xl text-sm sm:text-base">
+          <p className="app-subtitle mt-5 max-w-2xl text-base leading-7 sm:text-lg sm:leading-8">
             Hooked combines dating discovery with creator monetization through free matched chat,
             paid media, and per-minute private calls, all with compliance gates built in.
           </p>
@@ -140,7 +140,7 @@ export default function HomePage() {
               Explore discover flow
             </Link>
           </div>
-          <div className="mt-7 grid gap-2 text-sm text-white/85 sm:grid-cols-3">
+          <div className="mt-8 grid gap-2 text-sm text-white/85 sm:grid-cols-3">
             <p className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">Free matched text chat</p>
             <p className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">Tokenized media unlocks</p>
             <p className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">Per-minute live calls</p>
@@ -154,7 +154,7 @@ export default function HomePage() {
               alt="Romantic couple in city lights"
               width={1400}
               height={1000}
-              className="h-48 w-full object-cover sm:h-56"
+              className="h-56 w-full object-cover sm:h-64 lg:h-72"
               priority
             />
             <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-[#070b13] to-transparent p-4">
@@ -170,7 +170,7 @@ export default function HomePage() {
                   alt={`${creator.name} creator profile`}
                   width={420}
                   height={520}
-                  className="h-36 w-full object-cover"
+                  className="h-44 w-full object-cover"
                 />
                 <div className="p-2.5">
                   <p className="text-sm font-semibold">{creator.name}</p>
@@ -189,17 +189,17 @@ export default function HomePage() {
             className={`glass-panel reveal-rise rounded-2xl p-5 ${index === 1 ? "reveal-rise-delay-1" : ""} ${index === 2 ? "reveal-rise-delay-2" : ""}`}
           >
             <Image src={pillar.icon} alt="" aria-hidden width={24} height={24} className="h-6 w-6" />
-            <h2 className="mt-3 text-lg font-semibold">{pillar.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-text-muted">{pillar.copy}</p>
+            <h2 className="mt-3 text-xl font-semibold">{pillar.title}</h2>
+            <p className="mt-2 text-[15px] leading-7 text-text-muted">{pillar.copy}</p>
           </article>
         ))}
       </section>
 
       <section className="relative z-10 mx-auto mt-5 grid w-full max-w-6xl gap-2 sm:grid-cols-2 lg:grid-cols-5">
         {launchSignals.map((signal) => (
-          <article key={signal.label} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center">
+          <article key={signal.label} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-center">
             <p className="text-[11px] uppercase tracking-[0.15em] text-white/55">{signal.label}</p>
-            <p className="mt-1 text-sm font-semibold text-accent-strong">{signal.value}</p>
+            <p className="mt-1 text-base font-semibold text-accent-strong">{signal.value}</p>
           </article>
         ))}
       </section>
@@ -221,9 +221,9 @@ export default function HomePage() {
         <article className="app-surface reveal-rise reveal-rise-delay-1 rounded-3xl p-6">
           <p className="font-mono text-xs uppercase tracking-[0.16em] text-signal">Visual feed preview</p>
           <div className="mt-4 grid grid-cols-3 gap-2">
-            <Image src="/images/romantic-gallery-1.jpg" alt="Neon gallery preview" width={420} height={420} className="h-28 w-full rounded-xl object-cover" />
-            <Image src="/images/romantic-gallery-2.jpg" alt="Lounge gallery preview" width={420} height={420} className="h-28 w-full rounded-xl object-cover" />
-            <Image src="/images/romantic-gallery-3.jpg" alt="Sunset gallery preview" width={420} height={420} className="h-28 w-full rounded-xl object-cover" />
+            <Image src="/images/romantic-gallery-1.jpg" alt="Neon gallery preview" width={420} height={420} className="h-32 w-full rounded-xl object-cover sm:h-36" />
+            <Image src="/images/romantic-gallery-2.jpg" alt="Lounge gallery preview" width={420} height={420} className="h-32 w-full rounded-xl object-cover sm:h-36" />
+            <Image src="/images/romantic-gallery-3.jpg" alt="Sunset gallery preview" width={420} height={420} className="h-32 w-full rounded-xl object-cover sm:h-36" />
           </div>
           <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
             Safety gates active: age verification required for wallet, calls, and premium interactions.
@@ -237,8 +237,8 @@ export default function HomePage() {
           {funnelSteps.map((step, index) => (
             <article key={step.name} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/60">Step {index + 1}</p>
-              <h3 className="mt-1 text-base font-semibold">{step.name}</h3>
-              <p className="mt-1 text-sm text-text-muted">{step.detail}</p>
+              <h3 className="mt-1 text-lg font-semibold">{step.name}</h3>
+              <p className="mt-1 text-[15px] leading-6 text-text-muted">{step.detail}</p>
             </article>
           ))}
         </div>
@@ -247,9 +247,9 @@ export default function HomePage() {
       <section className="relative z-10 mx-auto mt-6 grid w-full max-w-6xl gap-5 lg:grid-cols-[1.05fr_0.95fr]">
         <article className="app-surface reveal-rise rounded-3xl p-6">
           <p className="font-mono text-xs uppercase tracking-[0.16em] text-accent-strong">Featured creators</p>
-          <h3 className="mt-2 text-xl font-semibold">Profile gallery</h3>
-          <p className="mt-2 text-sm text-text-muted">More visual discovery so users can connect quickly with the vibe they prefer.</p>
-          <div className="mt-4 grid grid-cols-3 gap-2">
+          <h3 className="mt-2 text-2xl font-semibold">Profile gallery</h3>
+          <p className="mt-2 text-base leading-7 text-text-muted">More visual discovery so users can connect quickly with the vibe they prefer.</p>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {photoWall.map((photo) => (
               <div key={photo.name} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
                 <Image
@@ -257,9 +257,9 @@ export default function HomePage() {
                   alt={`${photo.name} profile card`}
                   width={420}
                   height={420}
-                  className="h-28 w-full object-cover"
+                  className="h-36 w-full object-cover sm:h-40"
                 />
-                <p className="px-2.5 py-2 text-xs font-semibold text-white/85">{photo.name}</p>
+                <p className="px-2.5 py-2 text-sm font-semibold text-white/85">{photo.name}</p>
               </div>
             ))}
           </div>
@@ -267,8 +267,8 @@ export default function HomePage() {
 
         <article className="app-surface reveal-rise reveal-rise-delay-1 rounded-3xl p-6">
           <p className="font-mono text-xs uppercase tracking-[0.16em] text-signal">Premium visuals</p>
-          <h3 className="mt-2 text-xl font-semibold">High-intent experiences</h3>
-          <p className="mt-2 text-sm text-text-muted">Showcase paid unlock moments with image-led previews that still keep pricing transparent.</p>
+          <h3 className="mt-2 text-2xl font-semibold">High-intent experiences</h3>
+          <p className="mt-2 text-base leading-7 text-text-muted">Showcase paid unlock moments with image-led previews that still keep pricing transparent.</p>
           <div className="mt-4 space-y-3">
             {premiumScenes.map((scene) => (
               <div key={scene.title} className="relative overflow-hidden rounded-2xl border border-white/10">
@@ -277,7 +277,7 @@ export default function HomePage() {
                   alt={`${scene.title} preview`}
                   width={900}
                   height={520}
-                  className="h-28 w-full object-cover"
+                  className="h-36 w-full object-cover sm:h-40"
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-[#070b13]/95 to-transparent px-3 py-2">
                   <p className="text-xs font-semibold text-white/90">{scene.title}</p>
@@ -290,8 +290,8 @@ export default function HomePage() {
 
       <section className="relative z-10 mx-auto mt-8 w-full max-w-6xl rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-center sm:p-8">
         <p className="font-mono text-xs uppercase tracking-[0.16em] text-accent-strong">Launch-ready flow</p>
-        <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">Turn discovery into trusted premium interaction</h2>
-        <p className="mx-auto mt-3 max-w-2xl text-sm text-text-muted sm:text-base">
+        <h2 className="mt-3 text-3xl font-semibold sm:text-4xl">Turn discovery into trusted premium interaction</h2>
+        <p className="mx-auto mt-3 max-w-3xl text-base leading-7 text-text-muted sm:text-lg sm:leading-8">
           Start with free engagement, convert high-intent users with clear pricing, and run moderation-aware operations from day one.
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
