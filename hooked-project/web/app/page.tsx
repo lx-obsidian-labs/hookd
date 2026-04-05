@@ -55,6 +55,21 @@ const funnelSteps = [
   { name: "Call", detail: "Start private sessions with live spend metering." },
 ];
 
+const photoWall = [
+  { name: "Mila", image: "/profile-mila.svg" },
+  { name: "Nia", image: "/profile-nia.svg" },
+  { name: "Ari", image: "/profile-ari.svg" },
+  { name: "Skye", image: "/profile-skye.svg" },
+  { name: "Avery", image: "/profile-avery.svg" },
+  { name: "Jules", image: "/profile-jules.svg" },
+];
+
+const premiumScenes = [
+  { title: "Neon After Dark", image: "/asset-neon-card.svg" },
+  { title: "Velvet Lounge", image: "/asset-velvet-card.svg" },
+  { title: "Private Lounge", image: "/asset-lounge-card.svg" },
+];
+
 const footerNav = {
   explore: [
     { href: "/discover", label: "Discover" },
@@ -227,6 +242,50 @@ export default function HomePage() {
             </article>
           ))}
         </div>
+      </section>
+
+      <section className="relative z-10 mx-auto mt-6 grid w-full max-w-6xl gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+        <article className="app-surface reveal-rise rounded-3xl p-6">
+          <p className="font-mono text-xs uppercase tracking-[0.16em] text-accent-strong">Featured creators</p>
+          <h3 className="mt-2 text-xl font-semibold">Profile gallery</h3>
+          <p className="mt-2 text-sm text-text-muted">More visual discovery so users can connect quickly with the vibe they prefer.</p>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {photoWall.map((photo) => (
+              <div key={photo.name} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+                <Image
+                  src={photo.image}
+                  alt={`${photo.name} profile card`}
+                  width={420}
+                  height={420}
+                  className="h-28 w-full object-cover"
+                />
+                <p className="px-2.5 py-2 text-xs font-semibold text-white/85">{photo.name}</p>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="app-surface reveal-rise reveal-rise-delay-1 rounded-3xl p-6">
+          <p className="font-mono text-xs uppercase tracking-[0.16em] text-signal">Premium visuals</p>
+          <h3 className="mt-2 text-xl font-semibold">High-intent experiences</h3>
+          <p className="mt-2 text-sm text-text-muted">Showcase paid unlock moments with image-led previews that still keep pricing transparent.</p>
+          <div className="mt-4 space-y-3">
+            {premiumScenes.map((scene) => (
+              <div key={scene.title} className="relative overflow-hidden rounded-2xl border border-white/10">
+                <Image
+                  src={scene.image}
+                  alt={`${scene.title} preview`}
+                  width={900}
+                  height={520}
+                  className="h-28 w-full object-cover"
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-[#070b13]/95 to-transparent px-3 py-2">
+                  <p className="text-xs font-semibold text-white/90">{scene.title}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
       </section>
 
       <section className="relative z-10 mx-auto mt-8 w-full max-w-6xl rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-center sm:p-8">
